@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <link rel="stylesheet" type="text/css" href="style.css" />
+    <link href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+
+    <!-- three.js -->
+    <script src="./r99/three.min.js"></script>
+    <script src="./r99/OrbitControls.js"></script>
+    <script src="./r99/three.js"></script>
+    <script src="./r99/postprocessing/EffectComposer.js"></script>
+    <script src="./r99/postprocessing/ShaderPass.js"></script>
+    <script src="./r99/postprocessing/RenderPass.js"></script>
+    <script src="./r99/postprocessing/BloomPass.js"></script>
+    <script src="./r99/postprocessing/FilmPass.js"></script>
+    <script src="./r99/postprocessing/GlitchPass.js"></script>
+    <script src="./r99/shaders/ConvolutionShader.js"></script>
+    <script src="./r99/shaders/FilmShader.js"></script>
+    <script src="./r99/shaders/CopyShader.js"></script>
+    <script src="./r99/shaders/DigitalGlitch.js"></script>
+
+
+    <title>Three.js の復習</title>
+
+    <script>
+
+        // ページの読み込みを待つ
+        window.addEventListener('load', init);
+
+        function init() {
+            // サイズを指定
+            const width = 960;
+            const height = 540;
+            let rot = 0; // 角度
+
+            // レンダラーを作成
+            const renderer = new THREE.WebGLRenderer({
+                canvas: document.querySelector('#myCanvas')
+            });
+            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setSize(width, height);
+
+            // シーンを作成
+            const scene = new THREE.Scene();
+
+            // カメラを作成
+            const camera = new THREE.PerspectiveCamera(45, width / height);
+
+            // 星屑を作成します (カメラの動きをわかりやすくするため)
+            createStarField();
+
+            function createStarField() {
+                // 形状データを作成
+                const geometry = new THREE.Geometry();
+                // 配置する範囲
+                const SIZE = 3000;
+                // 配置する個数
+                const LENGTH = 1000;
+                for (let i = 0; i < LENGTH; i++) {
+                    geometry.vertices.push(new THREE.Vector3(
+                        SIZE * (Math.random() - 0.5),
+                        SIZE * (Math.random() - 0.5),
+                        SIZE * (Math.random() - 0.5),
+                    ));
+                }
+
+                // マテリアルを作成
+                const material = new THREE.PointsMaterial({
+                    // 一つ一つのサイズ
+                    size: 10,
+                    // 色
+                    color: 0xffffff
+                });
+
+                // 物体を作成
+                const mesh = new THREE.Points(geometry, material);
+                scene.add(mesh);
+            }
+
+            //■■composer(ここから)
+            const composer = new THREE.EffectComposer(renderer);
+            composer.addPass(new THREE.RenderPass(scene, camera));
+
+            const bloomPass = new THREE.BloomPass(
+                //ぼかしの強さで、小さいほどぼやける。
+                4.0,    // strength
+                //何のための設定可は不明。
+                25,   // kernel size
+                //鮮明さを設定し、大きいほどぼやける。
+                1.0,    // sigma ?
+                //解像度？小さいほど荒くなる。
+                512,  // blur render target resolution
+            );
+            composer.addPass(bloomPass);
+
+            //filmpass はテレビの設定のようなもの？
+            const filmPass = new THREE.FilmPass(
+                //瞬き具合？
+                0.35,   // noise intensity
+                0.025,  // scanline intensity  0.025
+                648,    // scanline count  648
+                false,  // grayscale
+            );
+            var toScreen = new THREE.ShaderPass(THREE.CopyShader);
+            toScreen.renderToScreen = true;
+            composer.addPass(toScreen);
+            //filmPass.renderToScreen = true;
+            //composer.addPass(filmPass);
+            //■■composer(ここまで)
+
+            requestAnimationFrame(function animate() {
+                //requestAnimationFrame(animate);
+
+                // rot += 0.05;
+                // const radian = (rot * Math.PI) / 180;
+                // camera.position.x = 1000 * Math.sin(radian);
+                // camera.position.z = 1000 * Math.cos(radian);
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+                composer.render(scene, camera);
+                // requestAnimationFrame(animate);
+            });
+
+            //tick();
+
+            // 毎フレーム時に実行されるループイベントです
+            function tick() {
+                rot += 0.05;
+
+                // ラジアンに変換する
+                const radian = (rot * Math.PI) / 180;
+                // 角度に応じてカメラの位置を設定
+                camera.position.x = 1000 * Math.sin(radian);
+                camera.position.z = 1000 * Math.cos(radian);
+                // 原点方向を見つめる
+                camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+                // レンダリング
+                renderer.render(scene, camera);
+
+                //  composer.setSize(canvas.width, canvas.height);
+                requestAnimationFrame(tick);
+            }
+        }
+    </script>
+
+</head>
+
+<body>
+    <h1>Three.js の復習</h1>
+    <!-- この領域に描画 -->
+    <canvas id="myCanvas"></canvas>
+
+</body>
+
+</html>
